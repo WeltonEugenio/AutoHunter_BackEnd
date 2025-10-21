@@ -47,6 +47,14 @@ def is_valid_url(url):
     except:
         return False
 
+def has_credentials(url):
+    """Verifica se a URL contém credenciais (usuário/senha)"""
+    try:
+        result = urlparse(url)
+        return bool(result.username or result.password)
+    except:
+        return False
+
 def scan_directory_recursive(url, file_type, max_depth=3, current_depth=0):
     """Escaneia um diretório recursivamente procurando por arquivos"""
     files = []
@@ -57,8 +65,14 @@ def scan_directory_recursive(url, file_type, max_depth=3, current_depth=0):
     try:
         print(f"Escaneando: {url} (profundidade: {current_depth})")
         
-        # Fazer requisição com timeout
-        response = requests.get(url, timeout=30, stream=True)
+        # Preparar autenticação se necessário
+        auth = None
+        parsed_url = urlparse(url)
+        if parsed_url.username and parsed_url.password:
+            auth = (parsed_url.username, parsed_url.password)
+        
+        # Fazer requisição com timeout e autenticação
+        response = requests.get(url, timeout=30, stream=True, auth=auth)
         response.raise_for_status()
         
         # Verificar se é HTML (diretório)
@@ -93,7 +107,7 @@ def scan_directory_recursive(url, file_type, max_depth=3, current_depth=0):
                 file_size = 0
                 try:
                     # Tentar obter o tamanho do arquivo
-                    head_response = requests.head(full_url, timeout=10)
+                    head_response = requests.head(full_url, timeout=10, auth=auth)
                     if head_response.status_code == 200:
                         file_size = int(head_response.headers.get('content-length', 0))
                 except:
@@ -139,12 +153,16 @@ def scan_url():
         print(f"Iniciando escaneamento de: {url}")
         print(f"Tipo de arquivo: {file_type}")
         
-        # TESTE: Verificar se é URL interna
-        if '172.17.' in url or '192.168.' in url or '10.' in url:
-            return jsonify({
-                "success": False,
-                "error": "URL interna detectada. O servidor AWS não consegue acessar redes privadas (172.17.x.x, 192.168.x.x, 10.x.x.x). Use uma URL pública ou configure VPN."
-            }), 400
+        # Verificar se é URL interna (apenas aviso, não bloqueia)
+        is_internal = '172.17.' in url or '192.168.' in url or '10.' in url
+        if is_internal:
+            print(f"AVISO: URL interna detectada: {url}")
+            print("Nota: URLs internas podem não ser acessíveis em produção (Vercel/AWS)")
+        
+        # Verificar se contém credenciais (apenas aviso)
+        if has_credentials(url):
+            print(f"AVISO: URL contém credenciais (usuário/senha)")
+            print("Nota: Tenha cuidado com URLs que contêm senhas em logs")
         
         # Escanear o diretório
         files = scan_directory_recursive(url, file_type)
