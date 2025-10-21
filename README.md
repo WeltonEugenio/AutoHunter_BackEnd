@@ -1,6 +1,6 @@
-# AutoZipHunter Backend
+# AutoHunter Backend
 
-Backend em Python usando FastAPI para escanear URLs e baixar arquivos ZIP e 7z.
+Backend em Python usando Flask para escanear URLs e baixar arquivos (ZIP, imagens, PDFs).
 
 ## Instalação
 
@@ -23,16 +23,26 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Configuração
+
+Crie um arquivo `.env` na raiz do projeto (opcional):
+```env
+PORT=8000
+```
+
+Se não configurar a variável `PORT`, o servidor usará a porta **8000** por padrão.
+
+### Deploy (Vercel, Heroku, etc.)
+
+Para plataformas de deploy, configure a variável de ambiente `PORT` nas configurações da plataforma. O servidor automaticamente usará a porta especificada pela plataforma.
+
 ## Executar
 
 ```bash
-python main.py
+python application.py
 ```
 
-Ou usando uvicorn diretamente:
-```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
+O servidor rodará em `http://0.0.0.0:8000` (ou na porta especificada pela variável `PORT`)
 
 ## API Endpoints
 
