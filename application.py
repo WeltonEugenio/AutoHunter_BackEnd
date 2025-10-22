@@ -75,19 +75,52 @@ def scan_directory_recursive(url, file_type, max_depth=3, current_depth=0):
         response = requests.get(url, timeout=30, stream=True, auth=auth)
         response.raise_for_status()
         
-        # Verificar se é HTML (diretório)
+        # Verificar se é um arquivo direto (não HTML)
         content_type = response.headers.get('content-type', '').lower()
+        filename = os.path.basename(parsed_url.path)
+        
+        # Se não é HTML, verificar se é um arquivo do tipo desejado
+        if 'text/html' not in content_type and filename:
+            if should_include_file(filename, file_type):
+                file_size = int(response.headers.get('content-length', 0))
+                files.append({
+                    'filename': filename,
+                    'url': url,
+                    'size': file_size
+                })
+                print(f"Arquivo direto encontrado: {filename} ({file_size} bytes)")
+            return files
+        
+        # Se é HTML, continuar com o escaneamento de diretório
         if 'text/html' not in content_type:
             return files
         
         # Parse simples do HTML usando regex
         html_content = response.text
         
+        # Debug: mostrar parte do conteúdo HTML
+        print(f"Content-Type: {content_type}")
+        print(f"HTML preview: {html_content[:200]}...")
+        
         # Encontrar links usando regex simples
         link_pattern = r'<a[^>]*href=["\']([^"\']*)["\'][^>]*>'
         links = re.findall(link_pattern, html_content, re.IGNORECASE)
         
         print(f"Encontrados {len(links)} links")
+        
+        # Se não encontrou links, tentar outros padrões
+        if len(links) == 0:
+            # Tentar encontrar URLs de arquivos diretamente no HTML
+            file_patterns = {
+                'pdf': r'[^"\'>\s]+\.pdf(?:\?[^"\'>\s]*)?',
+                'zip': r'[^"\'>\s]+\.(?:zip|7z|rar|tar|gz|bz2)(?:\?[^"\'>\s]*)?',
+                'images': r'[^"\'>\s]+\.(?:png|jpg|jpeg|gif|bmp|webp|svg)(?:\?[^"\'>\s]*)?'
+            }
+            
+            if file_type in file_patterns:
+                file_links = re.findall(file_patterns[file_type], html_content, re.IGNORECASE)
+                print(f"Encontrados {len(file_links)} arquivos {file_type} via regex direto")
+                links.extend(file_links)
         
         for href in links:
             if not href or href in ['../', './', '/']:
