@@ -55,7 +55,7 @@ def has_credentials(url):
     except:
         return False
 
-def scan_directory_recursive(url, file_type, max_depth=3, current_depth=0):
+def scan_directory_recursive(url, file_type, max_depth=3, current_depth=0, include_src=False):
     """Escaneia um diretório recursivamente procurando por arquivos"""
     files = []
     
@@ -106,7 +106,14 @@ def scan_directory_recursive(url, file_type, max_depth=3, current_depth=0):
         link_pattern = r'<a[^>]*href=["\']([^"\']*)["\'][^>]*>'
         links = re.findall(link_pattern, html_content, re.IGNORECASE)
         
-        print(f"Encontrados {len(links)} links")
+        print(f"Encontrados {len(links)} links href")
+        
+        # Se include_src=True, também buscar elementos com atributo src
+        if include_src:
+            src_pattern = r'<(?:img|script|iframe|video|audio|source|embed)[^>]*src=["\']([^"\']*)["\'][^>]*>'
+            src_links = re.findall(src_pattern, html_content, re.IGNORECASE)
+            print(f"Encontrados {len(src_links)} elementos com src")
+            links.extend(src_links)
         
         # Se não encontrou links, tentar outros padrões
         if len(links) == 0:
@@ -156,7 +163,7 @@ def scan_directory_recursive(url, file_type, max_depth=3, current_depth=0):
             
             # Se for um diretório, escanear recursivamente
             elif href.endswith('/') and current_depth < max_depth - 1:
-                sub_files = scan_directory_recursive(full_url, file_type, max_depth, current_depth + 1)
+                sub_files = scan_directory_recursive(full_url, file_type, max_depth, current_depth + 1, include_src)
                 files.extend(sub_files)
         
     except Exception as e:
@@ -170,6 +177,7 @@ def scan_url():
         data = request.get_json()
         url = data.get('url', '').strip()
         file_type = data.get('file_type', 'zip')
+        include_src = data.get('include_src', False)
         
         if not url:
             return jsonify({
@@ -185,6 +193,7 @@ def scan_url():
         
         print(f"Iniciando escaneamento de: {url}")
         print(f"Tipo de arquivo: {file_type}")
+        print(f"Incluir elementos src: {include_src}")
         
         # Verificar se é URL interna (apenas aviso, não bloqueia)
         is_internal = '172.17.' in url or '192.168.' in url or '10.' in url
@@ -198,7 +207,7 @@ def scan_url():
             print("Nota: Tenha cuidado com URLs que contêm senhas em logs")
         
         # Escanear o diretório
-        files = scan_directory_recursive(url, file_type)
+        files = scan_directory_recursive(url, file_type, include_src=include_src)
         
         print(f"Encontrados {len(files)} arquivos")
         
