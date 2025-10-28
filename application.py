@@ -260,9 +260,11 @@ def download_stream():
         import zipfile
         
         data = request.get_json()
-        files = data.get('files', [])
+        # Aceitar tanto 'files' quanto 'selected_files' do frontend
+        files = data.get('files', data.get('selected_files', []))
         
         if not files:
+            print(f"Erro: Nenhum arquivo recebido. Dados: {data}")
             return jsonify({
                 "success": False,
                 "error": "Nenhum arquivo para download"
