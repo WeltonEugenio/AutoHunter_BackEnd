@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Versão da API
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 # Criar a aplicação Flask
 app = Flask(__name__)
@@ -260,17 +260,34 @@ def download_stream():
         import zipfile
         
         data = request.get_json()
+        
+        if not data:
+            print("Erro: Nenhum dado JSON recebido")
+            return jsonify({
+                "success": False,
+                "error": "Nenhum dado recebido"
+            }), 400
+        
         # Aceitar tanto 'files' quanto 'selected_files' do frontend
         files = data.get('files', data.get('selected_files', []))
         
         if not files:
-            print(f"Erro: Nenhum arquivo recebido. Dados: {data}")
+            print(f"Erro: Nenhum arquivo recebido. Dados completos: {data}")
             return jsonify({
                 "success": False,
                 "error": "Nenhum arquivo para download"
             }), 400
         
+        # Validar estrutura dos arquivos
+        if not isinstance(files, list):
+            print(f"Erro: 'files' não é uma lista. Tipo: {type(files)}")
+            return jsonify({
+                "success": False,
+                "error": "Formato de arquivos inválido"
+            }), 400
+        
         print(f"Iniciando download de {len(files)} arquivos")
+        print(f"Arquivos recebidos: {files}")
         
         # Criar ZIP em memória
         memory_file = io.BytesIO()
@@ -329,10 +346,14 @@ def download_stream():
         )
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         print(f"Erro no download stream: {str(e)}")
+        print(f"Traceback completo:\n{error_details}")
         return jsonify({
             "success": False,
-            "error": f"Erro ao fazer download: {str(e)}"
+            "error": f"Erro ao fazer download: {str(e)}",
+            "details": error_details if app.debug else None
         }), 500
 
 # Para o Elastic Beanstalk
