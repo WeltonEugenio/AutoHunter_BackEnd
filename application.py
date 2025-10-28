@@ -325,12 +325,24 @@ def download_stream():
                         path_parts = parsed.path.rstrip('/view').split('/')
                         filename = path_parts[-1] if path_parts else 'arquivo'
             
-            # Converter URL /view
+            # Converter URL /view para /@@download/file
+            original_url = file_url
             if file_url.endswith('/view'):
                 file_url = file_url.replace('/view', '/@@download/file')
-                print(f"URL convertida: {file_url}")
+                print(f"✓ URL convertida de: {original_url}")
+                print(f"✓ URL convertida para: {file_url}")
+            elif not file_url.endswith('/@@download/file'):
+                # Se não termina com /view nem /@@download/file, adicionar /@@download/file
+                if '/view' in file_url:
+                    file_url = file_url.replace('/view', '/@@download/file')
+                else:
+                    # Adicionar /@@download/file se parece ser do gov.br/Plone
+                    if 'gov.br' in file_url and not file_url.endswith(('.pdf', '.zip', '.7z')):
+                        file_url = f"{file_url}/@@download/file"
+                print(f"✓ URL ajustada para: {file_url}")
             
-            print(f"Download único: {filename} de {file_url}")
+            print(f"📥 Iniciando download: {filename}")
+            print(f"🔗 URL final: {file_url}")
             
             # Preparar autenticação
             auth = None
@@ -338,15 +350,20 @@ def download_stream():
             if parsed_url.username and parsed_url.password:
                 auth = (parsed_url.username, parsed_url.password)
             
-            # Baixar arquivo
+            # Baixar arquivo com timeout mais curto para arquivos pequenos
+            import time
+            start_time = time.time()
+            
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-            response = requests.get(file_url, timeout=60, auth=auth, headers=headers, allow_redirects=True)
+            response = requests.get(file_url, timeout=15, auth=auth, headers=headers, allow_redirects=True, stream=False)
             response.raise_for_status()
+            
+            download_time = time.time() - start_time
             
             # Detectar tipo de conteúdo
             content_type = response.headers.get('content-type', 'application/octet-stream')
             
-            print(f"✓ Arquivo baixado: {len(response.content)} bytes, tipo: {content_type}")
+            print(f"✓ Arquivo baixado em {download_time:.2f}s: {len(response.content)} bytes, tipo: {content_type}")
             
             # Retornar arquivo direto (sem ZIP)
             from flask import Response
@@ -436,7 +453,7 @@ def download_stream():
                     headers = {
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                     }
-                    response = requests.get(file_url, timeout=30, auth=auth, headers=headers, allow_redirects=True)
+                    response = requests.get(file_url, timeout=15, auth=auth, headers=headers, allow_redirects=True, stream=False)
                     response.raise_for_status()
                     
                     # Adicionar ao ZIP

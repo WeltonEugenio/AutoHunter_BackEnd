@@ -2,6 +2,24 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas aqui.
 
+## [1.0.7] - 2025-10-28
+
+### Adicionado
+- ✅ Logs de tempo de download (mostra quantos segundos levou)
+- ✅ Conversão automática mais inteligente de URLs do gov.br
+- ✅ Suporte a URLs sem `/view` que também precisam de `/@@download/file`
+
+### Melhorado
+- ✅ Timeout reduzido de 60s → 15s para downloads mais rápidos
+- ✅ Stream desabilitado (`stream=False`) para melhor performance em arquivos pequenos
+- ✅ Resposta mais rápida para PDFs e arquivos pequenos
+- ✅ Logs mais informativos com emojis
+
+### Otimizado
+- ✅ Performance melhorada para arquivos pequenos
+- ✅ Menos latência no download
+- ✅ Detecção automática de URLs do gov.br/Plone
+
 ## [1.0.6] - 2025-10-28
 
 ### Adicionado
