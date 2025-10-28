@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Versão da API
-VERSION = "1.0.3"
+VERSION = "1.0.5"
 
 # Criar a aplicação Flask
 app = Flask(__name__)
@@ -304,6 +304,9 @@ def download_stream():
         
         # Criar ZIP em memória
         memory_file = io.BytesIO()
+        downloaded_count = 0
+        failed_count = 0
+        error_messages = []
         
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file_info in files:
@@ -352,14 +355,35 @@ def download_stream():
                     # Adicionar ao ZIP
                     zipf.writestr(filename, response.content)
                     print(f"✓ Arquivo adicionado: {filename}")
+                    downloaded_count += 1
                     
                 except Exception as e:
-                    print(f"✗ Erro ao baixar {filename}: {str(e)}")
+                    error_msg = f"Erro ao baixar {filename}: {str(e)}"
+                    print(f"✗ {error_msg}")
+                    error_messages.append(error_msg)
+                    failed_count += 1
                     # Continuar com próximo arquivo
                     continue
         
+        # Verificar se algum arquivo foi baixado com sucesso
+        print(f"Resumo: {downloaded_count} baixados, {failed_count} falharam")
+        
+        if downloaded_count == 0:
+            return jsonify({
+                "success": False,
+                "error": "Nenhum arquivo foi baixado com sucesso",
+                "details": {
+                    "total": len(files),
+                    "downloaded": downloaded_count,
+                    "failed": failed_count,
+                    "errors": error_messages
+                }
+            }), 400
+        
         # Voltar para o início do arquivo
         memory_file.seek(0)
+        
+        print(f"✓ ZIP criado com sucesso! Tamanho: {memory_file.getbuffer().nbytes} bytes")
         
         # Retornar ZIP como stream
         return Response(
