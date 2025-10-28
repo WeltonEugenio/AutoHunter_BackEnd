@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Versão da API
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 
 # Criar a aplicação Flask
 app = Flask(__name__)
@@ -270,6 +270,19 @@ def download_stream():
         
         # Aceitar tanto 'files' quanto 'selected_files' do frontend
         files = data.get('files', data.get('selected_files', []))
+        
+        # Se files é uma string JSON, fazer parse
+        if isinstance(files, str):
+            import json
+            try:
+                files = json.loads(files)
+                print(f"Files era string JSON, convertido para lista")
+            except json.JSONDecodeError as e:
+                print(f"Erro ao fazer parse de files como JSON: {e}")
+                return jsonify({
+                    "success": False,
+                    "error": "Formato de arquivos inválido (JSON mal formado)"
+                }), 400
         
         if not files:
             print(f"Erro: Nenhum arquivo recebido. Dados completos: {data}")
