@@ -2,6 +2,20 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas aqui.
 
+## [1.0.6] - 2025-10-28
+
+### Adicionado
+- ✅ **Download Inteligente**: 1 arquivo = download direto, múltiplos = ZIP
+- ✅ Arquivo único baixa no formato original (PDF, 7z, etc.)
+- ✅ Múltiplos arquivos são compactados em ZIP automaticamente
+
+### Melhorado
+- ✅ Headers CORS adicionais: `Access-Control-Expose-Headers`
+- ✅ Header `Content-Length` explícito
+- ✅ Header `Content-Type` duplicado para garantir compatibilidade
+- ✅ Melhor compatibilidade com diferentes browsers/clientes
+- ✅ Detecção automática de quando criar ou não ZIP
+
 ## [1.0.5] - 2025-10-28
 
 ### Corrigido
