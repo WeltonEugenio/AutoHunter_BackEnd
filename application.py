@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Versão da API
-VERSION = "1.0.6"
+VERSION = "1.0.7"
 
 # Criar a aplicação Flask
 app = Flask(__name__)
@@ -302,7 +302,69 @@ def download_stream():
         print(f"Iniciando download de {len(files)} arquivos")
         print(f"Arquivos recebidos: {files}")
         
-        # Criar ZIP em memória
+        # Se é apenas 1 arquivo, baixar direto (sem ZIP)
+        if len(files) == 1:
+            file_info = files[0]
+            
+            # Processar file_info
+            if isinstance(file_info, str):
+                if file_info.startswith('http://') or file_info.startswith('https://'):
+                    file_url = file_info
+                    parsed = urlparse(file_url)
+                    filename = os.path.basename(parsed.path)
+                    if filename == 'view':
+                        path_parts = parsed.path.rstrip('/view').split('/')
+                        filename = path_parts[-1] if path_parts else 'arquivo'
+            elif isinstance(file_info, dict):
+                file_url = file_info.get('url')
+                filename = file_info.get('filename')
+                if not filename:
+                    parsed = urlparse(file_url)
+                    filename = os.path.basename(parsed.path)
+                    if filename == 'view':
+                        path_parts = parsed.path.rstrip('/view').split('/')
+                        filename = path_parts[-1] if path_parts else 'arquivo'
+            
+            # Converter URL /view
+            if file_url.endswith('/view'):
+                file_url = file_url.replace('/view', '/@@download/file')
+                print(f"URL convertida: {file_url}")
+            
+            print(f"Download único: {filename} de {file_url}")
+            
+            # Preparar autenticação
+            auth = None
+            parsed_url = urlparse(file_url)
+            if parsed_url.username and parsed_url.password:
+                auth = (parsed_url.username, parsed_url.password)
+            
+            # Baixar arquivo
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            response = requests.get(file_url, timeout=60, auth=auth, headers=headers, allow_redirects=True)
+            response.raise_for_status()
+            
+            # Detectar tipo de conteúdo
+            content_type = response.headers.get('content-type', 'application/octet-stream')
+            
+            print(f"✓ Arquivo baixado: {len(response.content)} bytes, tipo: {content_type}")
+            
+            # Retornar arquivo direto (sem ZIP)
+            from flask import Response
+            return Response(
+                response.content,
+                mimetype=content_type,
+                headers={
+                    'Content-Disposition': f'attachment; filename={filename}',
+                    'Content-Type': content_type,
+                    'Content-Length': str(len(response.content)),
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length, Content-Type'
+                }
+            )
+        
+        # Múltiplos arquivos: criar ZIP
         memory_file = io.BytesIO()
         downloaded_count = 0
         failed_count = 0
@@ -411,14 +473,19 @@ def download_stream():
         print(f"✓ ZIP criado com sucesso! Tamanho: {memory_file.getbuffer().nbytes} bytes")
         
         # Retornar ZIP como stream
+        zip_data = memory_file.getvalue()
+        
         return Response(
-            memory_file.getvalue(),
+            zip_data,
             mimetype='application/zip',
             headers={
                 'Content-Disposition': 'attachment; filename=arquivos.zip',
+                'Content-Type': 'application/zip',
+                'Content-Length': str(len(zip_data)),
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length'
             }
         )
         
