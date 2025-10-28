@@ -2,6 +2,19 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas aqui.
 
+## [1.0.5] - 2025-10-28
+
+### Corrigido
+- ✅ Aceita `selected_files` como array de URLs (strings)
+- ✅ Aceita `selected_files` como array de objetos {url, filename}
+- ✅ Extração automática de filename da URL quando não fornecido
+- ✅ Tratamento especial para URLs terminadas em /view
+
+### Adicionado
+- ✅ Suporte a 3 formatos diferentes de entrada de arquivos
+- ✅ Extração inteligente de filename considerando /view no path
+- ✅ Logs detalhados do processamento de cada tipo de entrada
+
 ## [1.0.3] - 2025-10-28
 
 ### Corrigido
