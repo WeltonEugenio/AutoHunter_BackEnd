@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Versão da API
-VERSION = "1.0.5"
+VERSION = "1.0.6"
 
 # Criar a aplicação Flask
 app = Flask(__name__)
@@ -309,26 +309,51 @@ def download_stream():
         error_messages = []
         
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for file_info in files:
-                # Se file_info é string, fazer parse
+            for idx, file_info in enumerate(files):
+                # Se file_info é string (URL direta)
                 if isinstance(file_info, str):
-                    import json
-                    try:
-                        file_info = json.loads(file_info)
-                    except json.JSONDecodeError:
-                        print(f"Erro ao fazer parse de file_info: {file_info}")
+                    # Verificar se é uma URL ou JSON string
+                    if file_info.startswith('http://') or file_info.startswith('https://'):
+                        # É uma URL direta
+                        file_url = file_info
+                        # Extrair filename da URL
+                        parsed = urlparse(file_url)
+                        filename = os.path.basename(parsed.path)
+                        # Remover /view se existir
+                        if filename == 'view':
+                            path_parts = parsed.path.rstrip('/view').split('/')
+                            filename = path_parts[-1] if path_parts else f'file_{idx}'
+                        print(f"URL direta convertida: {filename} <- {file_url}")
+                    else:
+                        # Tentar fazer parse como JSON
+                        import json
+                        try:
+                            file_info = json.loads(file_info)
+                        except json.JSONDecodeError:
+                            print(f"Erro: file_info não é URL nem JSON válido: {file_info}")
+                            continue
+                
+                # Se file_info agora é dict, extrair url e filename
+                if isinstance(file_info, dict):
+                    file_url = file_info.get('url')
+                    filename = file_info.get('filename')
+                    
+                    if not file_url:
+                        print(f"Arquivo sem url: {file_info}")
                         continue
+                    
+                    if not filename:
+                        # Tentar extrair filename da URL
+                        parsed = urlparse(file_url)
+                        filename = os.path.basename(parsed.path)
+                        if filename == 'view':
+                            path_parts = parsed.path.rstrip('/view').split('/')
+                            filename = path_parts[-1] if path_parts else f'file_{idx}'
+                        print(f"Filename extraído da URL: {filename}")
                 
-                # Garantir que file_info é um dicionário
-                if not isinstance(file_info, dict):
-                    print(f"file_info não é dict: {type(file_info)} - {file_info}")
-                    continue
-                
-                file_url = file_info.get('url')
-                filename = file_info.get('filename')
-                
+                # Validação final
                 if not file_url or not filename:
-                    print(f"Arquivo sem url ou filename: {file_info}")
+                    print(f"Arquivo inválido após processamento: url={file_url}, filename={filename}")
                     continue
                 
                 try:
