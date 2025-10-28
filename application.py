@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Versão da API
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 
 # Criar a aplicação Flask
 app = Flask(__name__)
@@ -307,10 +307,25 @@ def download_stream():
         
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file_info in files:
+                # Se file_info é string, fazer parse
+                if isinstance(file_info, str):
+                    import json
+                    try:
+                        file_info = json.loads(file_info)
+                    except json.JSONDecodeError:
+                        print(f"Erro ao fazer parse de file_info: {file_info}")
+                        continue
+                
+                # Garantir que file_info é um dicionário
+                if not isinstance(file_info, dict):
+                    print(f"file_info não é dict: {type(file_info)} - {file_info}")
+                    continue
+                
                 file_url = file_info.get('url')
                 filename = file_info.get('filename')
                 
                 if not file_url or not filename:
+                    print(f"Arquivo sem url ou filename: {file_info}")
                     continue
                 
                 try:
