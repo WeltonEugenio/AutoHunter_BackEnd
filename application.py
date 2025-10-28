@@ -284,7 +284,12 @@ def download_stream():
                     continue
                 
                 try:
-                    print(f"Baixando: {filename}")
+                    # Converter URLs do tipo /view para /@@download/file (Plone/gov.br)
+                    if file_url.endswith('/view'):
+                        file_url = file_url.replace('/view', '/@@download/file')
+                        print(f"URL convertida: {file_url}")
+                    
+                    print(f"Baixando: {filename} de {file_url}")
                     
                     # Preparar autenticação se necessário
                     auth = None
@@ -292,8 +297,11 @@ def download_stream():
                     if parsed_url.username and parsed_url.password:
                         auth = (parsed_url.username, parsed_url.password)
                     
-                    # Baixar arquivo
-                    response = requests.get(file_url, timeout=30, auth=auth)
+                    # Baixar arquivo com headers que simulam browser
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                    response = requests.get(file_url, timeout=30, auth=auth, headers=headers, allow_redirects=True)
                     response.raise_for_status()
                     
                     # Adicionar ao ZIP
