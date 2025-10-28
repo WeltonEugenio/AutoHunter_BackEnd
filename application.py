@@ -235,6 +235,85 @@ def download_files():
         "errors": []
     })
 
+@app.route('/download-stream', methods=['OPTIONS'])
+def download_stream_options():
+    """Handle preflight requests for CORS"""
+    return '', 200
+
+@app.route('/download-stream', methods=['POST'])
+def download_stream():
+    """Faz download de múltiplos arquivos e retorna como stream"""
+    try:
+        from flask import Response, stream_with_context
+        import io
+        import zipfile
+        
+        data = request.get_json()
+        files = data.get('files', [])
+        
+        if not files:
+            return jsonify({
+                "success": False,
+                "error": "Nenhum arquivo para download"
+            }), 400
+        
+        print(f"Iniciando download de {len(files)} arquivos")
+        
+        # Criar ZIP em memória
+        memory_file = io.BytesIO()
+        
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for file_info in files:
+                file_url = file_info.get('url')
+                filename = file_info.get('filename')
+                
+                if not file_url or not filename:
+                    continue
+                
+                try:
+                    print(f"Baixando: {filename}")
+                    
+                    # Preparar autenticação se necessário
+                    auth = None
+                    parsed_url = urlparse(file_url)
+                    if parsed_url.username and parsed_url.password:
+                        auth = (parsed_url.username, parsed_url.password)
+                    
+                    # Baixar arquivo
+                    response = requests.get(file_url, timeout=30, auth=auth)
+                    response.raise_for_status()
+                    
+                    # Adicionar ao ZIP
+                    zipf.writestr(filename, response.content)
+                    print(f"✓ Arquivo adicionado: {filename}")
+                    
+                except Exception as e:
+                    print(f"✗ Erro ao baixar {filename}: {str(e)}")
+                    # Continuar com próximo arquivo
+                    continue
+        
+        # Voltar para o início do arquivo
+        memory_file.seek(0)
+        
+        # Retornar ZIP como stream
+        return Response(
+            memory_file.getvalue(),
+            mimetype='application/zip',
+            headers={
+                'Content-Disposition': 'attachment; filename=arquivos.zip',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            }
+        )
+        
+    except Exception as e:
+        print(f"Erro no download stream: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Erro ao fazer download: {str(e)}"
+        }), 500
+
 # Para o Elastic Beanstalk
 application = app
 
