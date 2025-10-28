@@ -10,13 +10,24 @@ from dotenv import load_dotenv
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
 
+# Versão da API
+VERSION = "1.0.0"
+
 # Criar a aplicação Flask
 app = Flask(__name__)
 CORS(app, origins=["*"], allow_headers=["*"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 @app.route('/')
 def home():
-    return jsonify({"message": "AutoHunter API is running"})
+    return jsonify({
+        "message": "AutoHunter API is running",
+        "version": VERSION,
+        "endpoints": {
+            "/scan": "POST - Escanear URLs por arquivos",
+            "/download": "POST - Download de arquivos (placeholder)",
+            "/download-stream": "POST - Download de múltiplos arquivos como ZIP"
+        }
+    })
 
 @app.route('/scan', methods=['OPTIONS'])
 def scan_options():
